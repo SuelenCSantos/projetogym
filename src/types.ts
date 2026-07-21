@@ -41,3 +41,26 @@ export interface MuscleLoad {
   role: 'primary' | 'secondary'
   sets: number
 }
+
+export interface TemplateSet {
+  weight: number
+  reps: number
+}
+
+export interface TemplateExerciseEntry {
+  exerciseId: string
+  exerciseName: string
+  primaryMuscles: string[]
+  secondaryMuscles: string[]
+  sets: TemplateSet[]
+}
+
+export interface WorkoutTemplate {
+  id: string
+  name: string // e.g. "Treino A"
+  exercises: TemplateExerciseEntry[]
+  createdAt: number
+}
+
+/** Weekday index (0=domingo ... 6=sábado) -> template id, or null for descanso */
+export type WeeklySchedule = Partial<Record<number, string | null>>

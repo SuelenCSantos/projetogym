@@ -4,6 +4,7 @@ import { deleteSession, getAllSessions } from '../lib/db'
 import { CheckinCalendar } from '../components/CheckinCalendar'
 import { SessionDetailModal } from '../components/SessionDetailModal'
 import { ProgressChart } from '../components/ProgressChart'
+import { getCachedName } from '../lib/translate'
 
 export function HistoryPage() {
   const [sessions, setSessions] = useState<WorkoutSession[] | null>(null)
@@ -33,7 +34,7 @@ export function HistoryPage() {
     const map = new Map<string, string>()
     for (const s of finished) {
       for (const e of s.entries) {
-        if (e.sets.length > 0) map.set(e.exerciseId, e.exerciseName)
+        if (e.sets.length > 0) map.set(e.exerciseId, getCachedName(e.exerciseId) ?? e.exerciseName)
       }
     }
     return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]))

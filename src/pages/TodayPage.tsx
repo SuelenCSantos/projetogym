@@ -1,31 +1,51 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Exercise, WorkoutSession } from '../types'
-import { getSessionsByDate, saveSession, todayLocalDate } from '../lib/db'
+import type { Exercise, WorkoutSession, WorkoutTemplate } from '../types'
+import { getAllTemplates, getSessionsByDate, saveSession, todayLocalDate } from '../lib/db'
+import { getSchedule, todayWeekday, WEEKDAY_LABELS_PT } from '../lib/schedule'
 import { WorkoutEntryCard } from '../components/WorkoutEntryCard'
 import { ExercisePicker } from '../components/ExercisePicker'
 import { MuscleBodyMap } from '../components/MuscleBodyMap'
 import { computeMuscleLoad } from '../lib/muscles'
+import { getCachedName } from '../lib/translate'
 
 interface Props {
   exercises: Exercise[]
 }
 
-function newSession(): WorkoutSession {
-  const date = todayLocalDate()
+function newSession(title: string): WorkoutSession {
   return {
     id: crypto.randomUUID(),
-    date,
+    date: todayLocalDate(),
     startedAt: Date.now(),
     finishedAt: null,
-    title: 'Treino de hoje',
+    title,
     entries: [],
   }
+}
+
+function sessionFromTemplate(template: WorkoutTemplate): WorkoutSession {
+  const session = newSession(template.name)
+  session.entries = template.exercises.map((e) => ({
+    exerciseId: e.exerciseId,
+    exerciseName: e.exerciseName,
+    primaryMuscles: e.primaryMuscles,
+    secondaryMuscles: e.secondaryMuscles,
+    sets: e.sets.map((s) => ({
+      id: crypto.randomUUID(),
+      weight: s.weight,
+      reps: s.reps,
+      completedAt: Date.now(),
+    })),
+  }))
+  return session
 }
 
 export function TodayPage({ exercises }: Props) {
   const [todaySessions, setTodaySessions] = useState<WorkoutSession[] | null>(null)
   const [draft, setDraft] = useState<WorkoutSession | null>(null)
+  const [templates, setTemplates] = useState<WorkoutTemplate[]>([])
   const [showPicker, setShowPicker] = useState(false)
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [justFinished, setJustFinished] = useState<WorkoutSession | null>(null)
 
   useEffect(() => {
@@ -33,6 +53,7 @@ export function TodayPage({ exercises }: Props) {
       setTodaySessions(sessions)
       setDraft(sessions.find((s) => s.finishedAt === null) ?? null)
     })
+    getAllTemplates().then(setTemplates)
   }, [])
 
   const finishedToday = useMemo(
@@ -40,14 +61,22 @@ export function TodayPage({ exercises }: Props) {
     [todaySessions],
   )
 
+  const schedule = useMemo(() => getSchedule(), [])
+  const scheduledId = schedule[todayWeekday()]
+  const isRestDay = scheduledId === null
+  const scheduledTemplate = useMemo(
+    () => (scheduledId ? templates.find((t) => t.id === scheduledId) ?? null : null),
+    [templates, scheduledId],
+  )
+
   async function persist(next: WorkoutSession) {
     setDraft(next)
     await saveSession(next)
   }
 
-  function startWorkout() {
-    const session = newSession()
+  function startWorkout(session: WorkoutSession) {
     persist(session)
+    setShowTemplatePicker(false)
   }
 
   function addExercise(exercise: Exercise) {
@@ -189,17 +218,51 @@ export function TodayPage({ exercises }: Props) {
           </div>
         )}
 
+        {!draft && scheduledTemplate && (
+          <div className="bg-cyan-950 rounded-xl p-3">
+            <p className="text-cyan-300 text-sm">
+              Hoje ({WEEKDAY_LABELS_PT[todayWeekday()]}) é dia de:
+            </p>
+            <p className="text-slate-100 font-semibold text-lg mb-2">{scheduledTemplate.name}</p>
+            <button
+              onClick={() => startWorkout(sessionFromTemplate(scheduledTemplate))}
+              className="w-full bg-cyan-500 text-slate-950 font-semibold rounded-xl py-2.5"
+            >
+              Começar {scheduledTemplate.name}
+            </button>
+          </div>
+        )}
+
+        {!draft && isRestDay && !scheduledTemplate && (
+          <div className="bg-slate-900 rounded-xl p-3 text-sm text-slate-400">
+            Hoje é dia de descanso na sua agenda. Pode treinar do zero se quiser.
+          </div>
+        )}
+
         {!draft && (
-          <button
-            onClick={startWorkout}
-            className="w-full bg-cyan-500 text-slate-950 font-semibold rounded-xl py-3 mt-2"
-          >
-            + Iniciar treino
-          </button>
+          <div className="space-y-2">
+            <button
+              onClick={() => startWorkout(newSession('Treino de hoje'))}
+              className="w-full bg-slate-800 text-slate-100 font-medium rounded-xl py-3"
+            >
+              + Iniciar treino do zero
+            </button>
+            {templates.length > 0 && (
+              <button
+                onClick={() => setShowTemplatePicker(true)}
+                className="w-full border border-dashed border-slate-700 text-slate-300 rounded-xl py-3 text-sm"
+              >
+                Escolher um treino salvo
+              </button>
+            )}
+          </div>
         )}
 
         {draft && (
           <>
+            {draft.title && draft.title !== 'Treino de hoje' && (
+              <p className="text-sm text-slate-500 -mt-1">Treino: {draft.title}</p>
+            )}
             {draft.entries.map((entry) => (
               <WorkoutEntryCard
                 key={entry.exerciseId}
@@ -240,6 +303,31 @@ export function TodayPage({ exercises }: Props) {
           </div>
           <div className="flex-1 min-h-0">
             <ExercisePicker exercises={exercises} onSelect={addExercise} />
+          </div>
+        </div>
+      )}
+
+      {showTemplatePicker && (
+        <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+            <h2 className="font-semibold">Escolher treino</h2>
+            <button onClick={() => setShowTemplatePicker(false)} className="text-slate-400 text-sm">
+              Fechar
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {templates.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => startWorkout(sessionFromTemplate(t))}
+                className="w-full text-left bg-slate-900 rounded-xl p-3"
+              >
+                <h3 className="font-medium">{t.name}</h3>
+                <p className="text-xs text-slate-500 mt-0.5 truncate">
+                  {t.exercises.map((e) => getCachedName(e.exerciseId) ?? e.exerciseName).join(', ')}
+                </p>
+              </button>
+            ))}
           </div>
         </div>
       )}

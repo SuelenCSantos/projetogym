@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 import type { WorkoutExerciseEntry } from '../types'
 import { muscleLabel } from '../lib/exercises'
+import { getCachedName } from '../lib/translate'
 
 interface Props {
   entry: WorkoutExerciseEntry
@@ -16,7 +17,7 @@ export function WorkoutEntryCard({ entry, onAddSet, onUpdateSet, onRemoveSet, on
     <div className="bg-slate-900 rounded-xl p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="font-medium truncate">{entry.exerciseName}</h3>
+          <h3 className="font-medium truncate">{getCachedName(entry.exerciseId) ?? entry.exerciseName}</h3>
           <p className="text-xs text-slate-500 truncate">
             {entry.primaryMuscles.map(muscleLabel).join(', ')}
           </p>

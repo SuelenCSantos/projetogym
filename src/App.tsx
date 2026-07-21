@@ -5,6 +5,7 @@ import { BottomNav, type Tab } from './components/BottomNav'
 import { TodayPage } from './pages/TodayPage'
 import { LibraryPage } from './pages/LibraryPage'
 import { HistoryPage } from './pages/HistoryPage'
+import { PlansPage } from './pages/PlansPage'
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('today')
@@ -27,6 +28,7 @@ export default function App() {
         {exercises && (
           <>
             {tab === 'today' && <TodayPage exercises={exercises} />}
+            {tab === 'plans' && <PlansPage exercises={exercises} />}
             {tab === 'library' && <LibraryPage exercises={exercises} />}
             {tab === 'history' && <HistoryPage />}
           </>

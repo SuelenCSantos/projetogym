@@ -1,6 +1,8 @@
 const CACHE_KEY = 'projetogym.instructions_pt.v1'
+const NAME_CACHE_KEY = 'projetogym.names_pt.v1'
 
 type TranslationCache = Record<string, string[]>
+type NameCache = Record<string, string>
 
 function readCache(): TranslationCache {
   try {
@@ -13,6 +15,22 @@ function readCache(): TranslationCache {
 function writeCache(cache: TranslationCache) {
   try {
     localStorage.setItem(CACHE_KEY, JSON.stringify(cache))
+  } catch {
+    // storage full or unavailable - translation just won't persist across sessions
+  }
+}
+
+function readNameCache(): NameCache {
+  try {
+    return JSON.parse(localStorage.getItem(NAME_CACHE_KEY) ?? '{}')
+  } catch {
+    return {}
+  }
+}
+
+function writeNameCache(cache: NameCache) {
+  try {
+    localStorage.setItem(NAME_CACHE_KEY, JSON.stringify(cache))
   } catch {
     // storage full or unavailable - translation just won't persist across sessions
   }
@@ -47,5 +65,24 @@ export async function translateInstructions(exerciseId: string, instructions: st
 
   cache[exerciseId] = translated
   writeCache(cache)
+  return translated
+}
+
+export function getCachedName(exerciseId: string): string | undefined {
+  return readNameCache()[exerciseId]
+}
+
+/**
+ * Translates an exercise's name to Portuguese, caching the result in localStorage
+ * keyed by exercise id. The English name stays the canonical id/search key
+ * throughout the app - this only affects what's displayed.
+ */
+export async function translateName(exerciseId: string, name: string): Promise<string> {
+  const cache = readNameCache()
+  if (cache[exerciseId]) return cache[exerciseId]
+
+  const translated = await translateLine(name).catch(() => name)
+  cache[exerciseId] = translated
+  writeNameCache(cache)
   return translated
 }

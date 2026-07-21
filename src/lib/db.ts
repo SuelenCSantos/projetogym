@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { WorkoutSession } from '../types'
+import type { WorkoutSession, WorkoutTemplate } from '../types'
 
 interface GymDB extends DBSchema {
   sessions: {
@@ -7,16 +7,25 @@ interface GymDB extends DBSchema {
     value: WorkoutSession
     indexes: { 'by-date': string }
   }
+  templates: {
+    key: string
+    value: WorkoutTemplate
+  }
 }
 
 let dbPromise: Promise<IDBPDatabase<GymDB>> | null = null
 
 function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<GymDB>('projetogym', 1, {
-      upgrade(db) {
-        const store = db.createObjectStore('sessions', { keyPath: 'id' })
-        store.createIndex('by-date', 'date')
+    dbPromise = openDB<GymDB>('projetogym', 2, {
+      upgrade(db, oldVersion) {
+        if (oldVersion < 1) {
+          const store = db.createObjectStore('sessions', { keyPath: 'id' })
+          store.createIndex('by-date', 'date')
+        }
+        if (oldVersion < 2) {
+          db.createObjectStore('templates', { keyPath: 'id' })
+        }
       },
     })
   }
@@ -42,6 +51,22 @@ export async function getAllSessions(): Promise<WorkoutSession[]> {
 export async function getSessionsByDate(date: string): Promise<WorkoutSession[]> {
   const db = await getDB()
   return db.getAllFromIndex('sessions', 'by-date', date)
+}
+
+export async function saveTemplate(template: WorkoutTemplate): Promise<void> {
+  const db = await getDB()
+  await db.put('templates', template)
+}
+
+export async function deleteTemplate(id: string): Promise<void> {
+  const db = await getDB()
+  await db.delete('templates', id)
+}
+
+export async function getAllTemplates(): Promise<WorkoutTemplate[]> {
+  const db = await getDB()
+  const all = await db.getAll('templates')
+  return all.sort((a, b) => a.name.localeCompare(b.name))
 }
 
 export function todayLocalDate(): string {

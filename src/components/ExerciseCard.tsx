@@ -4,11 +4,12 @@ import { equipmentLabel, muscleLabel } from '../lib/exercises'
 
 interface Props {
   exercise: Exercise
+  displayName?: string
   onClick: () => void
   rightAdornment?: React.ReactNode
 }
 
-export function ExerciseCard({ exercise, onClick, rightAdornment }: Props) {
+export function ExerciseCard({ exercise, displayName, onClick, rightAdornment }: Props) {
   return (
     <button
       onClick={onClick}
@@ -21,7 +22,7 @@ export function ExerciseCard({ exercise, onClick, rightAdornment }: Props) {
         className="w-16 h-16 rounded-lg shrink-0"
       />
       <div className="min-w-0 flex-1">
-        <div className="font-medium text-slate-100 truncate">{exercise.name}</div>
+        <div className="font-medium text-slate-100 truncate">{displayName ?? exercise.name}</div>
         <div className="text-xs text-slate-400 truncate">
           {exercise.primaryMuscles.map(muscleLabel).join(', ') || 'Geral'}
         </div>

@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import type { Exercise } from '../types'
 import { ExerciseCard } from './ExerciseCard'
 import { allEquipment, allMuscles, equipmentLabel, muscleLabel } from '../lib/exercises'
+import { getCachedName } from '../lib/translate'
+import { useTranslatedNames } from '../lib/useTranslatedNames'
 
 interface Props {
   exercises: Exercise[]
@@ -20,13 +22,20 @@ export function ExercisePicker({ exercises, onSelect, rightAdornment }: Props) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return exercises.filter((ex) => {
-      if (q && !ex.name.toLowerCase().includes(q)) return false
+      if (q) {
+        const matchesEnglish = ex.name.toLowerCase().includes(q)
+        const matchesPortuguese = getCachedName(ex.id)?.toLowerCase().includes(q)
+        if (!matchesEnglish && !matchesPortuguese) return false
+      }
       if (muscle && !ex.primaryMuscles.includes(muscle) && !ex.secondaryMuscles.includes(muscle))
         return false
       if (equipment && ex.equipment !== equipment) return false
       return true
     })
   }, [exercises, query, muscle, equipment])
+
+  const visible = useMemo(() => filtered.slice(0, 150), [filtered])
+  const names = useTranslatedNames(visible)
 
   return (
     <div className="flex flex-col h-full">
@@ -69,10 +78,11 @@ export function ExercisePicker({ exercises, onSelect, rightAdornment }: Props) {
         {filtered.length === 0 && (
           <p className="text-center text-slate-500 text-sm mt-8">Nenhum exercício encontrado.</p>
         )}
-        {filtered.slice(0, 150).map((ex) => (
+        {visible.map((ex) => (
           <ExerciseCard
             key={ex.id}
             exercise={ex}
+            displayName={names[ex.id]}
             onClick={() => onSelect(ex)}
             rightAdornment={rightAdornment?.(ex)}
           />

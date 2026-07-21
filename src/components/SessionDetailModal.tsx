@@ -1,6 +1,7 @@
 import type { WorkoutSession } from '../types'
 import { MuscleBodyMap } from './MuscleBodyMap'
 import { computeMuscleLoad } from '../lib/muscles'
+import { getCachedName } from '../lib/translate'
 
 interface Props {
   session: WorkoutSession
@@ -35,7 +36,7 @@ export function SessionDetailModal({ session, onClose, onDelete }: Props) {
         <div className="space-y-2">
           {session.entries.map((entry) => (
             <div key={entry.exerciseId} className="bg-slate-900 rounded-xl p-3">
-              <h3 className="font-medium mb-1.5">{entry.exerciseName}</h3>
+              <h3 className="font-medium mb-1.5">{getCachedName(entry.exerciseId) ?? entry.exerciseName}</h3>
               <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-400">
                 {entry.sets.map((s, i) => (
                   <span key={s.id}>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Exercise } from '../types'
 import { ExerciseImage } from './ExerciseImage'
 import { categoryLabel, equipmentLabel, levelLabel, muscleLabel } from '../lib/exercises'
-import { translateInstructions } from '../lib/translate'
+import { translateInstructions, translateName } from '../lib/translate'
 
 interface Props {
   exercise: Exercise
@@ -14,6 +14,7 @@ export function ExerciseDetailModal({ exercise, onClose, onAdd }: Props) {
   const [translated, setTranslated] = useState<string[] | null>(null)
   const [translating, setTranslating] = useState(false)
   const [translationFailed, setTranslationFailed] = useState(false)
+  const [translatedName, setTranslatedName] = useState<string | null>(null)
 
   useEffect(() => {
     setTranslated(null)
@@ -37,6 +38,17 @@ export function ExerciseDetailModal({ exercise, onClose, onAdd }: Props) {
     }
   }, [exercise.id])
 
+  useEffect(() => {
+    setTranslatedName(null)
+    let cancelled = false
+    translateName(exercise.id, exercise.name).then((result) => {
+      if (!cancelled) setTranslatedName(result)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [exercise.id])
+
   const displayedInstructions = translated ?? exercise.instructions
 
   return (
@@ -49,7 +61,12 @@ export function ExerciseDetailModal({ exercise, onClose, onAdd }: Props) {
         >
           ←
         </button>
-        <h2 className="font-semibold text-lg truncate">{exercise.name}</h2>
+        <div className="min-w-0">
+          <h2 className="font-semibold text-lg truncate">{translatedName ?? exercise.name}</h2>
+          {translatedName && translatedName !== exercise.name && (
+            <p className="text-xs text-slate-500 truncate">{exercise.name}</p>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">

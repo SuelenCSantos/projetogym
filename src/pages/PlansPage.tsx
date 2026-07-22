@@ -103,8 +103,9 @@ export function PlansPage({ exercises }: Props) {
               >
                 <h3 className="font-medium">{t.name}</h3>
                 <p className="text-xs text-slate-500 mt-0.5 truncate">
-                  {t.exercises.map((e) => getCachedName(e.exerciseId) ?? e.exerciseName).join(', ') ||
-                    'Sem exercícios'}
+                  {t.exercises
+                    .map((e) => getCachedName(e.exerciseId, e.exerciseName) ?? e.exerciseName)
+                    .join(', ') || 'Sem exercícios'}
                 </p>
               </button>
             ))}

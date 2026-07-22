@@ -19,7 +19,7 @@ export function useTranslatedNames(exercises: Exercise[]): Record<string, string
     const seeded: Record<string, string> = {}
     const pending: Exercise[] = []
     for (const ex of exercises) {
-      const cached = getCachedName(ex.id)
+      const cached = getCachedName(ex.id, ex.name)
       if (cached) seeded[ex.id] = cached
       else pending.push(ex)
     }

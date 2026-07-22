@@ -9,19 +9,43 @@ interface Props {
   onUpdateSet: (setId: string, field: 'weight' | 'reps', value: number) => void
   onRemoveSet: (setId: string) => void
   onRemoveEntry: () => void
+  onToggleCompleted: () => void
   lastWeight?: number
 }
 
-export function WorkoutEntryCard({ entry, onAddSet, onUpdateSet, onRemoveSet, onRemoveEntry }: Props) {
+export function WorkoutEntryCard({
+  entry,
+  onAddSet,
+  onUpdateSet,
+  onRemoveSet,
+  onRemoveEntry,
+  onToggleCompleted,
+}: Props) {
+  const done = entry.completed ?? false
   return (
-    <div className="bg-slate-900 rounded-xl p-3">
+    <div className={`bg-slate-900 rounded-xl p-3 ${done ? 'opacity-60' : ''}`}>
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="font-medium truncate">{getCachedName(entry.exerciseId) ?? entry.exerciseName}</h3>
-          <p className="text-xs text-slate-500 truncate">
-            {entry.primaryMuscles.map(muscleLabel).join(', ')}
-          </p>
-        </div>
+        <button
+          onClick={onToggleCompleted}
+          className="flex items-start gap-2.5 min-w-0 text-left"
+          aria-pressed={done}
+        >
+          <span
+            className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 text-xs ${
+              done ? 'bg-emerald-500 border-emerald-500 text-slate-950' : 'border-slate-600 text-transparent'
+            }`}
+          >
+            ✓
+          </span>
+          <span className="min-w-0">
+            <h3 className={`font-medium truncate ${done ? 'line-through' : ''}`}>
+              {getCachedName(entry.exerciseId, entry.exerciseName) ?? entry.exerciseName}
+            </h3>
+            <p className="text-xs text-slate-500 truncate">
+              {entry.primaryMuscles.map(muscleLabel).join(', ')}
+            </p>
+          </span>
+        </button>
         <button
           onClick={onRemoveEntry}
           className="text-slate-500 text-xs px-2 py-1 shrink-0"

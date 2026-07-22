@@ -25,6 +25,7 @@ export interface WorkoutExerciseEntry {
   primaryMuscles: string[]
   secondaryMuscles: string[]
   sets: WorkoutSet[]
+  completed?: boolean
 }
 
 export interface WorkoutSession {

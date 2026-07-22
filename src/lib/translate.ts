@@ -1,3 +1,5 @@
+import { curatedName } from './brNames'
+
 const CACHE_KEY = 'projetogym.instructions_pt.v1'
 const NAME_CACHE_KEY = 'projetogym.names_pt.v1'
 
@@ -68,16 +70,30 @@ export async function translateInstructions(exerciseId: string, instructions: st
   return translated
 }
 
-export function getCachedName(exerciseId: string): string | undefined {
+/**
+ * Looks up a display name without triggering any network request: the curated
+ * Brazilian gym term if one exists for this exercise, otherwise whatever
+ * machine translation was previously cached for it (if any).
+ */
+export function getCachedName(exerciseId: string, englishName?: string): string | undefined {
+  if (englishName) {
+    const curated = curatedName(englishName)
+    if (curated) return curated
+  }
   return readNameCache()[exerciseId]
 }
 
 /**
- * Translates an exercise's name to Portuguese, caching the result in localStorage
- * keyed by exercise id. The English name stays the canonical id/search key
- * throughout the app - this only affects what's displayed.
+ * Resolves an exercise's display name in Portuguese: a curated Brazilian gym
+ * term when we have one, otherwise a machine translation via the free
+ * MyMemory API, cached in localStorage keyed by exercise id. The English name
+ * stays the canonical id/search key throughout the app - this only affects
+ * what's displayed.
  */
 export async function translateName(exerciseId: string, name: string): Promise<string> {
+  const curated = curatedName(name)
+  if (curated) return curated
+
   const cache = readNameCache()
   if (cache[exerciseId]) return cache[exerciseId]
 

@@ -165,6 +165,17 @@ export function TodayPage({ exercises }: Props) {
     persist(next)
   }
 
+  function toggleCompleted(exerciseId: string) {
+    if (!draft) return
+    const next: WorkoutSession = {
+      ...draft,
+      entries: draft.entries.map((e) =>
+        e.exerciseId === exerciseId ? { ...e, completed: !e.completed } : e,
+      ),
+    }
+    persist(next)
+  }
+
   async function finishWorkout() {
     if (!draft) return
     const finished: WorkoutSession = { ...draft, finishedAt: Date.now() }
@@ -263,6 +274,20 @@ export function TodayPage({ exercises }: Props) {
             {draft.title && draft.title !== 'Treino de hoje' && (
               <p className="text-sm text-slate-500 -mt-1">Treino: {draft.title}</p>
             )}
+            {draft.entries.length > 0 && (
+              <div className="flex items-center justify-between text-xs text-slate-400 px-0.5">
+                <span>
+                  {draft.entries.filter((e) => e.completed).length} de {draft.entries.length} exercícios
+                  concluídos
+                </span>
+                <span>
+                  {Math.round(
+                    (draft.entries.filter((e) => e.completed).length / draft.entries.length) * 100,
+                  )}
+                  %
+                </span>
+              </div>
+            )}
             {draft.entries.map((entry) => (
               <WorkoutEntryCard
                 key={entry.exerciseId}
@@ -271,6 +296,7 @@ export function TodayPage({ exercises }: Props) {
                 onUpdateSet={(setId, field, value) => updateSet(entry.exerciseId, setId, field, value)}
                 onRemoveSet={(setId) => removeSet(entry.exerciseId, setId)}
                 onRemoveEntry={() => removeEntry(entry.exerciseId)}
+                onToggleCompleted={() => toggleCompleted(entry.exerciseId)}
               />
             ))}
 
@@ -324,7 +350,9 @@ export function TodayPage({ exercises }: Props) {
               >
                 <h3 className="font-medium">{t.name}</h3>
                 <p className="text-xs text-slate-500 mt-0.5 truncate">
-                  {t.exercises.map((e) => getCachedName(e.exerciseId) ?? e.exerciseName).join(', ')}
+                  {t.exercises
+                    .map((e) => getCachedName(e.exerciseId, e.exerciseName) ?? e.exerciseName)
+                    .join(', ')}
                 </p>
               </button>
             ))}

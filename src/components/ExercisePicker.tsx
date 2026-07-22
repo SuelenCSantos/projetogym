@@ -24,7 +24,7 @@ export function ExercisePicker({ exercises, onSelect, rightAdornment }: Props) {
     return exercises.filter((ex) => {
       if (q) {
         const matchesEnglish = ex.name.toLowerCase().includes(q)
-        const matchesPortuguese = getCachedName(ex.id)?.toLowerCase().includes(q)
+        const matchesPortuguese = getCachedName(ex.id, ex.name)?.toLowerCase().includes(q)
         if (!matchesEnglish && !matchesPortuguese) return false
       }
       if (muscle && !ex.primaryMuscles.includes(muscle) && !ex.secondaryMuscles.includes(muscle))

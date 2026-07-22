@@ -124,7 +124,9 @@ export function TemplateEditor({ template, allExercises, existingNames, onSave, 
           <div key={e.exerciseId} className="bg-slate-900 rounded-xl p-3">
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="min-w-0">
-                <h3 className="font-medium truncate">{getCachedName(e.exerciseId) ?? e.exerciseName}</h3>
+                <h3 className="font-medium truncate">
+                  {getCachedName(e.exerciseId, e.exerciseName) ?? e.exerciseName}
+                </h3>
                 <p className="text-xs text-slate-500 truncate">
                   {e.primaryMuscles.map(muscleLabel).join(', ')}
                 </p>

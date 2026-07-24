@@ -11,8 +11,8 @@ import {
   setDoc,
   where,
 } from 'firebase/firestore'
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
-import { db, storage } from './firebase'
+import { db } from './firebase'
+import { uploadToCloudinary } from './cloudinary'
 import type { FollowDoc, FollowStatus, Post, UserProfile } from '../types'
 
 function followId(followerUid: string, targetUid: string): string {
@@ -114,15 +114,13 @@ export async function createPost(
   mediaType: 'photo' | 'video',
   caption: string,
 ): Promise<Post> {
-  if (!db || !storage) throw new Error('Não configurado')
+  if (!db) throw new Error('Não configurado')
   if (mediaType === 'video' && file.size > MAX_VIDEO_BYTES) {
     throw new Error('Vídeo muito grande (máximo 50MB).')
   }
 
   const postId = crypto.randomUUID()
-  const storageRef = ref(storage, `posts/${authorUid}/${postId}/${file.name}`)
-  await uploadBytes(storageRef, file)
-  const mediaURL = await getDownloadURL(storageRef)
+  const mediaURL = await uploadToCloudinary(file, mediaType === 'photo' ? 'image' : 'video')
 
   const post: Post = {
     id: postId,

@@ -40,9 +40,10 @@ service cloud.firestore {
     // Leitura liberada para qualquer usuário logado: quem vê o quê é decidido
     // pelas *consultas* que o app faz (feed só busca de quem você segue,
     // perfil privado só busca posts depois de confirmar que você é seguidor
-    // aceito) - não pela regra em si. Mesma simplificação já aceita para o
-    // Storage (ver storage.rules): sem servidor próprio, essa é a troca
-    // consciente entre simplicidade e um bloqueio 100% à prova de URL direta.
+    // aceito) - não pela regra em si. O arquivo de mídia em si (Cloudinary)
+    // também é publicamente acessível por URL direta: sem servidor próprio,
+    // essa é a troca consciente entre simplicidade e um bloqueio 100% à
+    // prova de link direto.
     match /posts/{postId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;

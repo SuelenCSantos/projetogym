@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import type { Post, UserProfile } from '../types'
 import { useAuthContext } from '../lib/AuthContext'
 import { signOutUser, updateProfileFields } from '../lib/auth'
 import { countFollowers, countFollowing, getPendingRequests, getUserPosts } from '../lib/social'
 import { compressImage } from '../lib/media'
-import { storage } from '../lib/firebase'
+import { uploadToCloudinary } from '../lib/cloudinary'
 import { EditProfileModal } from '../components/EditProfileModal'
 import { FollowListModal } from '../components/FollowListModal'
 import { UserSearchModal } from '../components/UserSearchModal'
@@ -51,13 +50,11 @@ export function ProfilePage() {
 
   async function handlePhotoPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file || !storage || !user) return
+    if (!file || !user) return
     setUploadingPhoto(true)
     try {
       const blob = await compressImage(file, 400)
-      const storageRef = ref(storage, `users/${user.uid}/avatar.jpg`)
-      await uploadBytes(storageRef, blob)
-      const url = await getDownloadURL(storageRef)
+      const url = await uploadToCloudinary(blob, 'image')
       await updateProfileFields(user.uid, { photoURL: url })
       await refreshProfile()
     } finally {

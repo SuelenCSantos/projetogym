@@ -4,6 +4,8 @@ import { useAuthContext } from '../lib/AuthContext'
 import { signOutUser, updateProfileFields } from '../lib/auth'
 import { countFollowers, countFollowing, getPendingRequests, getUserPosts } from '../lib/social'
 import { uploadToCloudinary } from '../lib/cloudinary'
+import { getAllSessions } from '../lib/db'
+import { computeStreak } from '../lib/streak'
 import { EditProfileModal } from '../components/EditProfileModal'
 import { FollowListModal } from '../components/FollowListModal'
 import { UserSearchModal } from '../components/UserSearchModal'
@@ -28,6 +30,7 @@ export function ProfilePage() {
   const [viewingUser, setViewingUser] = useState<UserProfile | null>(null)
   const [avatarChoiceOpen, setAvatarChoiceOpen] = useState(false)
   const [pickedImageSrc, setPickedImageSrc] = useState<string | null>(null)
+  const [photoError, setPhotoError] = useState<string | null>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
 
@@ -49,6 +52,27 @@ export function ProfilePage() {
     }
   }, [profile])
 
+  // O histórico local (IndexedDB) é a fonte da verdade da sequência de dias
+  // treinados - o perfil só recebe uma cópia dela toda vez que é aberto, pra
+  // não ficar desatualizado caso a sincronização de quando o treino foi
+  // finalizado não tenha rodado (ex: treinos feitos antes de logar).
+  useEffect(() => {
+    if (!profile) return
+    getAllSessions()
+      .then((sessions) => {
+        const streak = computeStreak(sessions)
+        if (streak !== profile.currentStreak) {
+          const trainedDates = sessions.filter((s) => s.finishedAt !== null).map((s) => s.date)
+          const lastWorkoutDate = trainedDates.sort().at(-1) ?? null
+          return updateProfileFields(profile.uid, { currentStreak: streak, lastWorkoutDate }).then(
+            refreshProfile,
+          )
+        }
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.uid])
+
   if (!user || !profile) {
     return <div className="p-4 text-slate-500">Carregando...</div>
   }
@@ -65,10 +89,13 @@ export function ProfilePage() {
     if (!user) return
     setPickedImageSrc(null)
     setUploadingPhoto(true)
+    setPhotoError(null)
     try {
       const url = await uploadToCloudinary(blob, 'image')
       await updateProfileFields(user.uid, { photoURL: url })
       await refreshProfile()
+    } catch (err) {
+      setPhotoError(err instanceof Error ? err.message : 'Não foi possível enviar a foto.')
     } finally {
       setUploadingPhoto(false)
     }
@@ -108,6 +135,7 @@ export function ProfilePage() {
               <span className="absolute inset-0 bg-black/50 flex items-center justify-center text-xs">...</span>
             )}
           </button>
+          {photoError && <p className="text-rose-400 text-xs mt-1.5">{photoError}</p>}
           <input
             ref={cameraInputRef}
             type="file"

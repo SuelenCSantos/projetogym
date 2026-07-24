@@ -13,13 +13,17 @@ export function AvatarCropper({ imageSrc, onCancel, onCropped }: Props) {
   const [zoom, setZoom] = useState(1)
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleConfirm() {
     if (!croppedAreaPixels) return
     setBusy(true)
+    setError(null)
     try {
       const blob = await cropImage(imageSrc, croppedAreaPixels)
       onCropped(blob)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível recortar a foto.')
     } finally {
       setBusy(false)
     }
@@ -61,6 +65,7 @@ export function AvatarCropper({ imageSrc, onCancel, onCropped }: Props) {
             className="flex-1"
           />
         </label>
+        {error && <p className="text-rose-400 text-sm">{error}</p>}
         <button
           onClick={handleConfirm}
           disabled={busy || !croppedAreaPixels}

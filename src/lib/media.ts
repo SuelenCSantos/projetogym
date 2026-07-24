@@ -28,7 +28,6 @@ interface PixelCrop {
 export function cropImage(imageSrc: string, crop: PixelCrop, outputSize = 400): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image()
-    img.crossOrigin = 'anonymous'
     img.onload = () => {
       const canvas = document.createElement('canvas')
       canvas.width = outputSize

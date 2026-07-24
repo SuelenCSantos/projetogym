@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Exercise, WorkoutSession, WorkoutTemplate } from '../types'
-import { getAllTemplates, getSessionsByDate, saveSession, todayLocalDate } from '../lib/db'
+import { getAllSessions, getAllTemplates, getSessionsByDate, saveSession, todayLocalDate } from '../lib/db'
 import { getSchedule, todayWeekday, WEEKDAY_LABELS_PT } from '../lib/schedule'
 import { WorkoutEntryCard } from '../components/WorkoutEntryCard'
 import { ExercisePicker } from '../components/ExercisePicker'
 import { MuscleBodyMap } from '../components/MuscleBodyMap'
 import { computeMuscleLoad } from '../lib/muscles'
 import { getCachedName } from '../lib/translate'
+import { computeStreak } from '../lib/streak'
+import { getCachedUid } from '../lib/authCache'
 
 interface Props {
   exercises: Exercise[]
@@ -183,6 +185,20 @@ export function TodayPage({ exercises }: Props) {
     setTodaySessions((prev) => [...(prev ?? []).filter((s) => s.id !== finished.id), finished])
     setDraft(null)
     setJustFinished(finished)
+    syncStreakToProfile()
+  }
+
+  async function syncStreakToProfile() {
+    const uid = getCachedUid()
+    if (!uid) return
+    try {
+      const allSessions = await getAllSessions()
+      const streak = computeStreak(allSessions)
+      const { updateProfileFields } = await import('../lib/auth')
+      await updateProfileFields(uid, { currentStreak: streak, lastWorkoutDate: todayLocalDate() })
+    } catch {
+      // sem internet ou perfil social não configurado - a sequência local não é afetada
+    }
   }
 
   if (todaySessions === null) {

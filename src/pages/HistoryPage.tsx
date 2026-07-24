@@ -5,6 +5,7 @@ import { CheckinCalendar } from '../components/CheckinCalendar'
 import { SessionDetailModal } from '../components/SessionDetailModal'
 import { ProgressChart } from '../components/ProgressChart'
 import { getCachedName } from '../lib/translate'
+import { computeStreak } from '../lib/streak'
 
 export function HistoryPage() {
   const [sessions, setSessions] = useState<WorkoutSession[] | null>(null)
@@ -24,6 +25,8 @@ export function HistoryPage() {
   const finished = useMemo(() => sessions?.filter((s) => s.finishedAt !== null) ?? [], [sessions])
 
   const trainedDates = useMemo(() => new Set(finished.map((s) => s.date)), [finished])
+
+  const streak = useMemo(() => computeStreak(sessions ?? []), [sessions])
 
   const sessionsOnSelectedDay = useMemo(
     () => (selectedDate ? (sessions ?? []).filter((s) => s.date === selectedDate) : []),
@@ -66,7 +69,14 @@ export function HistoryPage() {
   return (
     <div className="flex flex-col h-full">
       <header className="px-4 pt-4 pb-2 shrink-0">
-        <h1 className="text-xl font-bold">Histórico</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold">Histórico</h1>
+          {streak > 0 && (
+            <span className="bg-orange-950 text-orange-300 text-sm px-3 py-1 rounded-full">
+              🔥 {streak} {streak === 1 ? 'dia seguido' : 'dias seguidos'}
+            </span>
+          )}
+        </div>
         <p className="text-slate-500 text-sm">Dias treinados e progressão de carga</p>
       </header>
 

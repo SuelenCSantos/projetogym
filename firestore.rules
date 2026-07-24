@@ -1,0 +1,52 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Perfil básico (nome, foto, contadores, sequência) é sempre visível a
+    // qualquer usuário logado, mesmo de conta privada - só os posts ficam
+    // escondidos (ver regra de /posts abaixo). Mesmo padrão do Instagram.
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isSignedIn() && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    // Reserva de nome de usuário único - criado junto com o users/{uid} numa
+    // transação (ver claimUsername em src/lib/auth.ts).
+    match /usernames/{username} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /follows/{followId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.followerUid == request.auth.uid;
+      // só o alvo pode aceitar uma solicitação, e só pode mexer no campo status
+      allow update: if isSignedIn()
+        && request.auth.uid == resource.data.targetUid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      // unfollow (por quem segue) ou remover seguidor/recusar solicitação (pelo alvo)
+      allow delete: if isSignedIn()
+        && (request.auth.uid == resource.data.followerUid || request.auth.uid == resource.data.targetUid);
+    }
+
+    // Leitura liberada para qualquer usuário logado: quem vê o quê é decidido
+    // pelas *consultas* que o app faz (feed só busca de quem você segue,
+    // perfil privado só busca posts depois de confirmar que você é seguidor
+    // aceito) - não pela regra em si. Mesma simplificação já aceita para o
+    // Storage (ver storage.rules): sem servidor próprio, essa é a troca
+    // consciente entre simplicidade e um bloqueio 100% à prova de URL direta.
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;
+      allow update, delete: if isSignedIn() && request.auth.uid == resource.data.authorUid;
+    }
+  }
+}

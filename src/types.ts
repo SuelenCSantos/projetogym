@@ -65,3 +65,34 @@ export interface WorkoutTemplate {
 
 /** Weekday index (0=domingo ... 6=sábado) -> template id, or null for descanso */
 export type WeeklySchedule = Partial<Record<number, string | null>>
+
+export interface UserProfile {
+  uid: string
+  username: string
+  usernameLower: string
+  displayName: string
+  photoURL: string | null
+  isPrivate: boolean
+  currentStreak: number
+  lastWorkoutDate: string | null // YYYY-MM-DD
+  createdAt: number
+}
+
+export type FollowStatus = 'accepted' | 'pending'
+
+export interface FollowDoc {
+  followerUid: string
+  targetUid: string
+  status: FollowStatus
+  createdAt: number
+}
+
+export interface Post {
+  id: string
+  authorUid: string
+  mediaType: 'photo' | 'video'
+  mediaURL: string
+  thumbnailURL: string | null
+  caption: string
+  createdAt: number
+}

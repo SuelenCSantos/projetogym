@@ -1,4 +1,4 @@
-export type Tab = 'today' | 'plans' | 'library' | 'history'
+export type Tab = 'today' | 'plans' | 'library' | 'history' | 'feed' | 'profile'
 
 interface Props {
   tab: Tab
@@ -7,9 +7,11 @@ interface Props {
 
 const ITEMS: { id: Tab; label: string; icon: string }[] = [
   { id: 'today', label: 'Hoje', icon: '🏋️' },
-  { id: 'plans', label: 'Meus treinos', icon: '📋' },
+  { id: 'plans', label: 'Treinos', icon: '📋' },
   { id: 'library', label: 'Exercícios', icon: '📚' },
   { id: 'history', label: 'Histórico', icon: '📈' },
+  { id: 'feed', label: 'Feed', icon: '📸' },
+  { id: 'profile', label: 'Perfil', icon: '👤' },
 ]
 
 export function BottomNav({ tab, onChange }: Props) {
@@ -20,11 +22,11 @@ export function BottomNav({ tab, onChange }: Props) {
           <button
             key={item.id}
             onClick={() => onChange(item.id)}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-xs ${
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] ${
               tab === item.id ? 'text-cyan-400' : 'text-slate-500'
             }`}
           >
-            <span className="text-lg leading-none">{item.icon}</span>
+            <span className="text-base leading-none">{item.icon}</span>
             {item.label}
           </button>
         ))}

@@ -1,0 +1,25 @@
+rules_version = '2';
+
+// Leitura pública dos arquivos: a visibilidade de verdade (conta privada,
+// seguidores aceitos) é controlada pelas regras do Firestore, que decidem
+// quais URLs a UI chega a mostrar. Quem tiver o link direto do arquivo
+// consegue abrir mesmo assim - limitação aceita para manter o app sem
+// servidor próprio (ver observação no plano/README sobre isso).
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /users/{userId}/avatar.jpg {
+      allow read;
+      allow write: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /posts/{userId}/{postId}/{fileName} {
+      allow read;
+      allow write: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 50 * 1024 * 1024;
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import type { Exercise } from './types'
 import { loadExercises } from './lib/exercises'
 import { BottomNav, type Tab } from './components/BottomNav'
@@ -6,6 +6,10 @@ import { TodayPage } from './pages/TodayPage'
 import { LibraryPage } from './pages/LibraryPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { PlansPage } from './pages/PlansPage'
+
+// Lazy-loaded: pulls in the Firebase SDK, so people who never touch Feed/Perfil
+// never download it and the core workout tracker stays fast.
+const SocialSection = lazy(() => import('./components/SocialSection'))
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('today')
@@ -31,6 +35,11 @@ export default function App() {
             {tab === 'plans' && <PlansPage exercises={exercises} />}
             {tab === 'library' && <LibraryPage exercises={exercises} />}
             {tab === 'history' && <HistoryPage />}
+            {(tab === 'feed' || tab === 'profile') && (
+              <Suspense fallback={<div className="p-4 text-slate-500">Carregando...</div>}>
+                <SocialSection view={tab} />
+              </Suspense>
+            )}
           </>
         )}
       </div>

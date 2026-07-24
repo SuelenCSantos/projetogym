@@ -124,3 +124,17 @@ export interface Message {
   text: string
   createdAt: number
 }
+
+export type NotificationType = 'like' | 'comment' | 'message'
+
+export interface AppNotification {
+  id: string
+  recipientUid: string
+  actorUid: string
+  type: NotificationType
+  postId?: string
+  commentText?: string
+  conversationId?: string
+  read: boolean
+  createdAt: number
+}

@@ -86,5 +86,13 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.senderUid == request.auth.uid;
       allow update, delete: if false;
     }
+
+    // Notificações: quem criou (curtiu/comentou/mandou mensagem) é sempre
+    // diferente do destinatário (checado em src/lib/notifications.ts antes
+    // de criar). Só o destinatário lê/marca como lida/apaga as suas.
+    match /notifications/{notificationId} {
+      allow read, update, delete: if isSignedIn() && request.auth.uid == resource.data.recipientUid;
+      allow create: if isSignedIn() && request.resource.data.actorUid == request.auth.uid;
+    }
   }
 }

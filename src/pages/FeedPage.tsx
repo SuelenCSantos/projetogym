@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
-import type { Post } from '../types'
+import type { Post, UserProfile } from '../types'
 import { useAuthContext } from '../lib/AuthContext'
 import { getFeedPosts, getFollowingIds } from '../lib/social'
 import { PostCard } from '../components/PostCard'
 import { PostComposer } from '../components/PostComposer'
+import { UserProfilePage } from './UserProfilePage'
 
 export function FeedPage() {
   const { profile } = useAuthContext()
   const [posts, setPosts] = useState<Post[] | null>(null)
   const [composing, setComposing] = useState(false)
+  const [viewingUser, setViewingUser] = useState<UserProfile | null>(null)
 
   async function load() {
     if (!profile) return
@@ -43,7 +45,7 @@ export function FeedPage() {
           </p>
         )}
         {posts?.map((post) => (
-          <PostCard key={post.id} post={post} viewerUid={profile.uid} />
+          <PostCard key={post.id} post={post} viewerUid={profile.uid} onOpenUser={setViewingUser} />
         ))}
       </div>
 
@@ -64,6 +66,14 @@ export function FeedPage() {
             setPosts((prev) => [post, ...(prev ?? [])])
             setComposing(false)
           }}
+        />
+      )}
+
+      {viewingUser && (
+        <UserProfilePage
+          profile={viewingUser}
+          onClose={() => setViewingUser(null)}
+          onOpenUser={setViewingUser}
         />
       )}
     </div>

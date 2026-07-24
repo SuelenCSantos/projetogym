@@ -3,18 +3,21 @@ import type { Post, UserProfile } from '../types'
 import { getUserProfile } from '../lib/auth'
 import { countComments, countLikes, hasLiked, toggleLike } from '../lib/social'
 import { CommentsModal } from './CommentsModal'
+import { LikesModal } from './LikesModal'
 
 interface Props {
   post: Post
   viewerUid: string
+  onOpenUser: (profile: UserProfile) => void
 }
 
-export function PostCard({ post, viewerUid }: Props) {
+export function PostCard({ post, viewerUid, onOpenUser }: Props) {
   const [author, setAuthor] = useState<UserProfile | null>(null)
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState<number | null>(null)
   const [commentCount, setCommentCount] = useState<number | null>(null)
   const [commentsOpen, setCommentsOpen] = useState(false)
+  const [likesOpen, setLikesOpen] = useState(false)
 
   const interactionsEnabled = post.allowInteractions !== false
 
@@ -46,7 +49,7 @@ export function PostCard({ post, viewerUid }: Props) {
     setLiked(next)
     setLikeCount((n) => (n ?? 0) + (next ? 1 : -1))
     try {
-      await toggleLike(post.id, viewerUid)
+      await toggleLike(post.id, viewerUid, post.authorUid)
     } catch {
       setLiked(!next)
       setLikeCount((n) => (n ?? 0) + (next ? -1 : 1))
@@ -79,11 +82,16 @@ export function PostCard({ post, viewerUid }: Props) {
 
       {interactionsEnabled && (
         <div className="flex items-center gap-4 px-3 py-2.5 text-sm text-slate-400">
-          <button onClick={handleToggleLike} className="flex items-center gap-1.5">
+          <button onClick={handleToggleLike} aria-label="Curtir">
             <span className={liked ? 'text-rose-500' : ''}>{liked ? '❤️' : '🤍'}</span>
-            <span>{likeCount ?? '···'}</span>
           </button>
-          <button onClick={() => setCommentsOpen(true)} className="flex items-center gap-1.5">
+          <button
+            onClick={() => likeCount && likeCount > 0 && setLikesOpen(true)}
+            className="hover:underline"
+          >
+            {likeCount ?? '···'} {likeCount === 1 ? 'curtida' : 'curtidas'}
+          </button>
+          <button onClick={() => setCommentsOpen(true)} className="flex items-center gap-1.5 ml-auto">
             <span>💬</span>
             <span>{commentCount ?? '···'}</span>
           </button>
@@ -93,10 +101,15 @@ export function PostCard({ post, viewerUid }: Props) {
       {commentsOpen && (
         <CommentsModal
           postId={post.id}
+          postAuthorUid={post.authorUid}
           viewerUid={viewerUid}
           onClose={() => setCommentsOpen(false)}
           onCommentAdded={() => setCommentCount((n) => (n ?? 0) + 1)}
+          onOpenUser={onOpenUser}
         />
+      )}
+      {likesOpen && (
+        <LikesModal postId={post.id} onClose={() => setLikesOpen(false)} onSelectUser={onOpenUser} />
       )}
     </div>
   )

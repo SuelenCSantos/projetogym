@@ -11,6 +11,7 @@ import {
   type Unsubscribe,
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { notifyMessage } from './notifications'
 import type { Conversation, Message } from '../types'
 
 export function conversationId(uidA: string, uidB: string): string {
@@ -36,7 +37,12 @@ export async function getOrCreateConversation(uidA: string, uidB: string): Promi
   return id
 }
 
-export async function sendMessage(convId: string, senderUid: string, text: string): Promise<void> {
+export async function sendMessage(
+  convId: string,
+  senderUid: string,
+  recipientUid: string,
+  text: string,
+): Promise<void> {
   if (!db) throw new Error('Não configurado')
   const trimmed = text.trim()
   if (!trimmed) return
@@ -54,6 +60,7 @@ export async function sendMessage(convId: string, senderUid: string, text: strin
     { lastMessageText: trimmed, lastMessageAt: message.createdAt, lastMessageSenderUid: senderUid },
     { merge: true },
   )
+  await notifyMessage(recipientUid, senderUid, convId)
 }
 
 /** Live-subscribes to a conversation's messages, oldest first. */

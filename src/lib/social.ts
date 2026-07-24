@@ -13,6 +13,8 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { uploadToCloudinary } from './cloudinary'
+import { notifyComment, notifyLike } from './notifications'
+import { getUserProfile } from './auth'
 import type { Comment, FollowDoc, FollowStatus, Post, UserProfile } from '../types'
 
 function followId(followerUid: string, targetUid: string): string {
@@ -187,8 +189,17 @@ export async function countLikes(postId: string): Promise<number> {
   return snap.data().count
 }
 
+export async function getLikers(postId: string): Promise<UserProfile[]> {
+  if (!db) return []
+  const q = query(collection(db, 'likes'), where('postId', '==', postId))
+  const snap = await getDocs(q)
+  const uids = snap.docs.map((d) => (d.data() as { uid: string }).uid)
+  const profiles = await Promise.all(uids.map((uid) => getUserProfile(uid)))
+  return profiles.filter((p): p is UserProfile => p !== null)
+}
+
 /** Toggles the current user's like on a post; returns the new liked state. */
-export async function toggleLike(postId: string, uid: string): Promise<boolean> {
+export async function toggleLike(postId: string, uid: string, postAuthorUid: string): Promise<boolean> {
   if (!db) return false
   const ref = doc(db, 'likes', likeId(postId, uid))
   const snap = await getDoc(ref)
@@ -197,19 +208,27 @@ export async function toggleLike(postId: string, uid: string): Promise<boolean> 
     return false
   }
   await setDoc(ref, { postId, uid, createdAt: Date.now() })
+  await notifyLike(postAuthorUid, uid, postId)
   return true
 }
 
-export async function addComment(postId: string, authorUid: string, text: string): Promise<Comment> {
+export async function addComment(
+  postId: string,
+  commenterUid: string,
+  text: string,
+  postAuthorUid: string,
+): Promise<Comment> {
   if (!db) throw new Error('Não configurado')
+  const trimmed = text.trim()
   const comment: Comment = {
     id: crypto.randomUUID(),
     postId,
-    authorUid,
-    text: text.trim(),
+    authorUid: commenterUid,
+    text: trimmed,
     createdAt: Date.now(),
   }
   await setDoc(doc(db, 'comments', comment.id), comment)
+  await notifyComment(postAuthorUid, commenterUid, postId, trimmed)
   return comment
 }
 

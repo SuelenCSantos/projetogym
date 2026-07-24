@@ -30,7 +30,7 @@ export function ChatPage({ conversationId, myUid, otherProfile, onClose }: Props
     setSending(true)
     setText('')
     try {
-      await sendMessage(conversationId, myUid, trimmed)
+      await sendMessage(conversationId, myUid, otherProfile.uid, trimmed)
     } finally {
       setSending(false)
     }

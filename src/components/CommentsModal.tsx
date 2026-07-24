@@ -5,12 +5,14 @@ import { addComment, getComments } from '../lib/social'
 
 interface Props {
   postId: string
+  postAuthorUid: string
   viewerUid: string
   onClose: () => void
   onCommentAdded: () => void
+  onOpenUser: (profile: UserProfile) => void
 }
 
-function CommentRow({ comment }: { comment: Comment }) {
+function CommentRow({ comment, onOpenUser }: { comment: Comment; onOpenUser: (p: UserProfile) => void }) {
   const [author, setAuthor] = useState<UserProfile | null>(null)
 
   useEffect(() => {
@@ -34,7 +36,13 @@ function CommentRow({ comment }: { comment: Comment }) {
       </span>
       <div className="min-w-0">
         <span className="text-sm">
-          <span className="font-medium">@{author?.username ?? '...'}</span>{' '}
+          <button
+            onClick={() => author && onOpenUser(author)}
+            className="font-medium hover:underline"
+            disabled={!author}
+          >
+            @{author?.username ?? '...'}
+          </button>{' '}
           <span className="text-slate-300">{comment.text}</span>
         </span>
       </div>
@@ -42,7 +50,14 @@ function CommentRow({ comment }: { comment: Comment }) {
   )
 }
 
-export function CommentsModal({ postId, viewerUid, onClose, onCommentAdded }: Props) {
+export function CommentsModal({
+  postId,
+  postAuthorUid,
+  viewerUid,
+  onClose,
+  onCommentAdded,
+  onOpenUser,
+}: Props) {
   const [comments, setComments] = useState<Comment[] | null>(null)
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -62,7 +77,7 @@ export function CommentsModal({ postId, viewerUid, onClose, onCommentAdded }: Pr
     if (!trimmed) return
     setBusy(true)
     try {
-      await addComment(postId, viewerUid, trimmed)
+      await addComment(postId, viewerUid, trimmed, postAuthorUid)
       setText('')
       await load()
       onCommentAdded()
@@ -86,7 +101,7 @@ export function CommentsModal({ postId, viewerUid, onClose, onCommentAdded }: Pr
           <p className="text-slate-600 text-sm text-center mt-8">Nenhum comentário ainda.</p>
         )}
         {comments?.map((c) => (
-          <CommentRow key={c.id} comment={c} />
+          <CommentRow key={c.id} comment={c} onOpenUser={onOpenUser} />
         ))}
       </div>
 

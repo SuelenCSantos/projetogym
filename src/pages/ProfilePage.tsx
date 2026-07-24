@@ -6,6 +6,7 @@ import { countFollowers, countFollowing, getPendingRequests, getUserPosts } from
 import { uploadToCloudinary } from '../lib/cloudinary'
 import { getAllSessions } from '../lib/db'
 import { computeStreak } from '../lib/streak'
+import { countUnreadNotifications } from '../lib/notifications'
 import { EditProfileModal } from '../components/EditProfileModal'
 import { FollowListModal } from '../components/FollowListModal'
 import { UserSearchModal } from '../components/UserSearchModal'
@@ -14,12 +15,15 @@ import { AvatarCropper } from '../components/AvatarCropper'
 import { UserProfilePage } from './UserProfilePage'
 import { FollowRequestsPage } from './FollowRequestsPage'
 import { ConversationsListPage } from './ConversationsListPage'
+import { NotificationsPage } from './NotificationsPage'
+import { ChatPage } from './ChatPage'
 
 export function ProfilePage() {
   const { user, profile, refreshProfile } = useAuthContext()
   const [followers, setFollowers] = useState<number | null>(null)
   const [following, setFollowing] = useState<number | null>(null)
   const [pendingCount, setPendingCount] = useState(0)
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [posts, setPosts] = useState<Post[] | null>(null)
   const [editing, setEditing] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
@@ -27,7 +31,11 @@ export function ProfilePage() {
   const [searching, setSearching] = useState(false)
   const [requestsOpen, setRequestsOpen] = useState(false)
   const [messagesOpen, setMessagesOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [viewingUser, setViewingUser] = useState<UserProfile | null>(null)
+  const [directChat, setDirectChat] = useState<{ conversationId: string; otherProfile: UserProfile } | null>(
+    null,
+  )
   const [avatarChoiceOpen, setAvatarChoiceOpen] = useState(false)
   const [pickedImageSrc, setPickedImageSrc] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
@@ -50,6 +58,9 @@ export function ProfilePage() {
         .then((r) => setPendingCount(r.length))
         .catch(() => setPendingCount(0))
     }
+    countUnreadNotifications(profile.uid)
+      .then(setUnreadNotifications)
+      .catch(() => setUnreadNotifications(0))
   }, [profile])
 
   // O histórico local (IndexedDB) é a fonte da verdade da sequência de dias
@@ -111,6 +122,21 @@ export function ProfilePage() {
           </button>
           <button onClick={() => setMessagesOpen(true)} className="text-slate-400" aria-label="Mensagens">
             💬
+          </button>
+          <button
+            onClick={() => {
+              setNotificationsOpen(true)
+              setUnreadNotifications(0)
+            }}
+            className="relative text-slate-400"
+            aria-label="Notificações"
+          >
+            🔔
+            {unreadNotifications > 0 && (
+              <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+                {unreadNotifications > 9 ? '9+' : unreadNotifications}
+              </span>
+            )}
           </button>
           <button onClick={() => signOutUser()} className="text-sm text-slate-500">
             Sair
@@ -267,6 +293,22 @@ export function ProfilePage() {
         />
       )}
       {messagesOpen && <ConversationsListPage myUid={profile.uid} onClose={() => setMessagesOpen(false)} />}
+      {notificationsOpen && (
+        <NotificationsPage
+          myUid={profile.uid}
+          onClose={() => setNotificationsOpen(false)}
+          onOpenUser={setViewingUser}
+          onOpenChat={(conversationId, otherProfile) => setDirectChat({ conversationId, otherProfile })}
+        />
+      )}
+      {directChat && (
+        <ChatPage
+          conversationId={directChat.conversationId}
+          myUid={profile.uid}
+          otherProfile={directChat.otherProfile}
+          onClose={() => setDirectChat(null)}
+        />
+      )}
       {viewingUser && (
         <UserProfilePage
           profile={viewingUser}

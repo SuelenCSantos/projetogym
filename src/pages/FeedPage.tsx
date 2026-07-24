@@ -42,7 +42,9 @@ export function FeedPage() {
             Nada por aqui ainda. Siga alguém ou publique seu primeiro post.
           </p>
         )}
-        {posts?.map((post) => <PostCard key={post.id} post={post} />)}
+        {posts?.map((post) => (
+          <PostCard key={post.id} post={post} viewerUid={profile.uid} />
+        ))}
       </div>
 
       <button
@@ -56,6 +58,7 @@ export function FeedPage() {
       {composing && (
         <PostComposer
           authorUid={profile.uid}
+          defaultAllowInteractions={profile.allowInteractions ?? true}
           onClose={() => setComposing(false)}
           onCreated={(post) => {
             setPosts((prev) => [post, ...(prev ?? [])])

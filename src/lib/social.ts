@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import { uploadToCloudinary } from './cloudinary'
-import type { FollowDoc, FollowStatus, Post, UserProfile } from '../types'
+import type { Comment, FollowDoc, FollowStatus, Post, UserProfile } from '../types'
 
 function followId(followerUid: string, targetUid: string): string {
   return `${followerUid}_${targetUid}`
@@ -113,6 +113,7 @@ export async function createPost(
   file: File,
   mediaType: 'photo' | 'video',
   caption: string,
+  allowInteractions: boolean,
 ): Promise<Post> {
   if (!db) throw new Error('Não configurado')
   if (mediaType === 'video' && file.size > MAX_VIDEO_BYTES) {
@@ -130,6 +131,7 @@ export async function createPost(
     thumbnailURL: null,
     caption,
     createdAt: Date.now(),
+    allowInteractions,
   }
   await setDoc(doc(db, 'posts', postId), post)
   return post
@@ -166,4 +168,66 @@ export async function getUserPosts(uid: string): Promise<Post[]> {
 export async function deletePost(postId: string): Promise<void> {
   if (!db) return
   await deleteDoc(doc(db, 'posts', postId))
+}
+
+function likeId(postId: string, uid: string): string {
+  return `${postId}_${uid}`
+}
+
+export async function hasLiked(postId: string, uid: string): Promise<boolean> {
+  if (!db) return false
+  const snap = await getDoc(doc(db, 'likes', likeId(postId, uid)))
+  return snap.exists()
+}
+
+export async function countLikes(postId: string): Promise<number> {
+  if (!db) return 0
+  const q = query(collection(db, 'likes'), where('postId', '==', postId))
+  const snap = await getCountFromServer(q)
+  return snap.data().count
+}
+
+/** Toggles the current user's like on a post; returns the new liked state. */
+export async function toggleLike(postId: string, uid: string): Promise<boolean> {
+  if (!db) return false
+  const ref = doc(db, 'likes', likeId(postId, uid))
+  const snap = await getDoc(ref)
+  if (snap.exists()) {
+    await deleteDoc(ref)
+    return false
+  }
+  await setDoc(ref, { postId, uid, createdAt: Date.now() })
+  return true
+}
+
+export async function addComment(postId: string, authorUid: string, text: string): Promise<Comment> {
+  if (!db) throw new Error('Não configurado')
+  const comment: Comment = {
+    id: crypto.randomUUID(),
+    postId,
+    authorUid,
+    text: text.trim(),
+    createdAt: Date.now(),
+  }
+  await setDoc(doc(db, 'comments', comment.id), comment)
+  return comment
+}
+
+export async function getComments(postId: string): Promise<Comment[]> {
+  if (!db) return []
+  const q = query(collection(db, 'comments'), where('postId', '==', postId), orderBy('createdAt', 'asc'))
+  const snap = await getDocs(q)
+  return snap.docs.map((d) => d.data() as Comment)
+}
+
+export async function countComments(postId: string): Promise<number> {
+  if (!db) return 0
+  const q = query(collection(db, 'comments'), where('postId', '==', postId))
+  const snap = await getCountFromServer(q)
+  return snap.data().count
+}
+
+export async function deleteComment(commentId: string): Promise<void> {
+  if (!db) return
+  await deleteDoc(doc(db, 'comments', commentId))
 }

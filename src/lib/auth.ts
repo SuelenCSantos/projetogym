@@ -96,7 +96,12 @@ export async function claimUsername(uid: string, username: string, displayName: 
 
 export async function updateProfileFields(
   uid: string,
-  fields: Partial<Pick<UserProfile, 'displayName' | 'photoURL' | 'isPrivate' | 'currentStreak' | 'lastWorkoutDate'>>,
+  fields: Partial<
+    Pick<
+      UserProfile,
+      'displayName' | 'photoURL' | 'isPrivate' | 'allowInteractions' | 'currentStreak' | 'lastWorkoutDate'
+    >
+  >,
 ): Promise<void> {
   if (!db) return
   await setDoc(doc(db, 'users', uid), fields, { merge: true })

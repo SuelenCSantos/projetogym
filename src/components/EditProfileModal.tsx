@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { UserProfile } from '../types'
 import { updateProfileFields } from '../lib/auth'
+import { Toggle } from './Toggle'
 
 interface Props {
   profile: UserProfile
@@ -11,12 +12,17 @@ interface Props {
 export function EditProfileModal({ profile, onSaved, onClose }: Props) {
   const [displayName, setDisplayName] = useState(profile.displayName)
   const [isPrivate, setIsPrivate] = useState(profile.isPrivate)
+  const [allowInteractions, setAllowInteractions] = useState(profile.allowInteractions ?? true)
   const [busy, setBusy] = useState(false)
 
   async function handleSave() {
     setBusy(true)
     try {
-      await updateProfileFields(profile.uid, { displayName: displayName.trim() || profile.username, isPrivate })
+      await updateProfileFields(profile.uid, {
+        displayName: displayName.trim() || profile.username,
+        isPrivate,
+        allowInteractions,
+      })
       await onSaved()
       onClose()
     } finally {
@@ -43,28 +49,19 @@ export function EditProfileModal({ profile, onSaved, onClose }: Props) {
           />
         </label>
 
-        <button
-          onClick={() => setIsPrivate((v) => !v)}
-          className="w-full flex items-center justify-between bg-slate-900 rounded-xl p-3"
-        >
-          <span className="text-left">
-            <span className="block text-sm font-medium">Conta privada</span>
-            <span className="block text-xs text-slate-500">
-              Só quem você aceitar vê seus posts e sequência de treino
-            </span>
-          </span>
-          <span
-            className={`w-11 h-6 rounded-full shrink-0 relative transition-colors ${
-              isPrivate ? 'bg-cyan-500' : 'bg-slate-700'
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
-                isPrivate ? 'translate-x-5' : 'translate-x-0.5'
-              }`}
-            />
-          </span>
-        </button>
+        <Toggle
+          checked={isPrivate}
+          onChange={setIsPrivate}
+          label="Conta privada"
+          description="Só quem você aceitar vê seus posts e sequência de treino"
+        />
+
+        <Toggle
+          checked={allowInteractions}
+          onChange={setAllowInteractions}
+          label="Permitir reações e comentários"
+          description="Deixa quem vê seus posts curtir e comentar"
+        />
       </div>
 
       <div className="p-4 border-t border-slate-800">

@@ -1,13 +1,22 @@
 import { useEffect, useState } from 'react'
 import type { Post, UserProfile } from '../types'
 import { getUserProfile } from '../lib/auth'
+import { countComments, countLikes, hasLiked, toggleLike } from '../lib/social'
+import { CommentsModal } from './CommentsModal'
 
 interface Props {
   post: Post
+  viewerUid: string
 }
 
-export function PostCard({ post }: Props) {
+export function PostCard({ post, viewerUid }: Props) {
   const [author, setAuthor] = useState<UserProfile | null>(null)
+  const [liked, setLiked] = useState(false)
+  const [likeCount, setLikeCount] = useState<number | null>(null)
+  const [commentCount, setCommentCount] = useState<number | null>(null)
+  const [commentsOpen, setCommentsOpen] = useState(false)
+
+  const interactionsEnabled = post.allowInteractions !== false
 
   useEffect(() => {
     let cancelled = false
@@ -18,6 +27,31 @@ export function PostCard({ post }: Props) {
       cancelled = true
     }
   }, [post.authorUid])
+
+  useEffect(() => {
+    if (!interactionsEnabled) return
+    hasLiked(post.id, viewerUid)
+      .then(setLiked)
+      .catch(() => {})
+    countLikes(post.id)
+      .then(setLikeCount)
+      .catch(() => setLikeCount(0))
+    countComments(post.id)
+      .then(setCommentCount)
+      .catch(() => setCommentCount(0))
+  }, [post.id, viewerUid, interactionsEnabled])
+
+  async function handleToggleLike() {
+    const next = !liked
+    setLiked(next)
+    setLikeCount((n) => (n ?? 0) + (next ? 1 : -1))
+    try {
+      await toggleLike(post.id, viewerUid)
+    } catch {
+      setLiked(!next)
+      setLikeCount((n) => (n ?? 0) + (next ? -1 : 1))
+    }
+  }
 
   return (
     <div className="bg-slate-900 rounded-xl overflow-hidden">
@@ -41,7 +75,29 @@ export function PostCard({ post }: Props) {
         <video src={post.mediaURL} controls playsInline className="w-full max-h-[420px] bg-black" />
       )}
 
-      {post.caption && <p className="p-3 text-sm text-slate-200">{post.caption}</p>}
+      {post.caption && <p className="p-3 pb-1.5 text-sm text-slate-200">{post.caption}</p>}
+
+      {interactionsEnabled && (
+        <div className="flex items-center gap-4 px-3 py-2.5 text-sm text-slate-400">
+          <button onClick={handleToggleLike} className="flex items-center gap-1.5">
+            <span className={liked ? 'text-rose-500' : ''}>{liked ? '❤️' : '🤍'}</span>
+            <span>{likeCount ?? '···'}</span>
+          </button>
+          <button onClick={() => setCommentsOpen(true)} className="flex items-center gap-1.5">
+            <span>💬</span>
+            <span>{commentCount ?? '···'}</span>
+          </button>
+        </div>
+      )}
+
+      {commentsOpen && (
+        <CommentsModal
+          postId={post.id}
+          viewerUid={viewerUid}
+          onClose={() => setCommentsOpen(false)}
+          onCommentAdded={() => setCommentCount((n) => (n ?? 0) + 1)}
+        />
+      )}
     </div>
   )
 }

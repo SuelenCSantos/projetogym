@@ -2,20 +2,23 @@ import { useState } from 'react'
 import type { Post } from '../types'
 import { createPost } from '../lib/social'
 import { compressImage, getVideoDuration } from '../lib/media'
+import { Toggle } from './Toggle'
 
 interface Props {
   authorUid: string
+  defaultAllowInteractions: boolean
   onClose: () => void
   onCreated: (post: Post) => void
 }
 
 const MAX_VIDEO_SECONDS = 60
 
-export function PostComposer({ authorUid, onClose, onCreated }: Props) {
+export function PostComposer({ authorUid, defaultAllowInteractions, onClose, onCreated }: Props) {
   const [file, setFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [mediaType, setMediaType] = useState<'photo' | 'video'>('photo')
   const [caption, setCaption] = useState('')
+  const [allowInteractions, setAllowInteractions] = useState(defaultAllowInteractions)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -48,7 +51,7 @@ export function PostComposer({ authorUid, onClose, onCreated }: Props) {
         const blob = await compressImage(file, 1280)
         uploadFile = new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' })
       }
-      const post = await createPost(authorUid, uploadFile, mediaType, caption.trim())
+      const post = await createPost(authorUid, uploadFile, mediaType, caption.trim(), allowInteractions)
       onCreated(post)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível publicar.')
@@ -68,10 +71,37 @@ export function PostComposer({ authorUid, onClose, onCreated }: Props) {
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {!previewUrl && (
-          <label className="flex flex-col items-center justify-center gap-2 border border-dashed border-slate-700 rounded-xl h-56 text-slate-400 text-sm cursor-pointer">
-            📷 Escolher foto ou vídeo curto
-            <input type="file" accept="image/*,video/*" className="hidden" onChange={handleFilePick} />
-          </label>
+          <div className="grid grid-cols-1 gap-2">
+            <label className="flex items-center justify-center gap-2 border border-dashed border-slate-700 rounded-xl h-16 text-slate-300 text-sm cursor-pointer">
+              📷 Tirar foto
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleFilePick}
+              />
+            </label>
+            <label className="flex items-center justify-center gap-2 border border-dashed border-slate-700 rounded-xl h-16 text-slate-300 text-sm cursor-pointer">
+              🎥 Gravar vídeo
+              <input
+                type="file"
+                accept="video/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleFilePick}
+              />
+            </label>
+            <label className="flex items-center justify-center gap-2 border border-dashed border-slate-700 rounded-xl h-16 text-slate-400 text-sm cursor-pointer">
+              🖼️ Escolher da galeria
+              <input
+                type="file"
+                accept="image/*,video/*"
+                className="hidden"
+                onChange={handleFilePick}
+              />
+            </label>
+          </div>
         )}
 
         {previewUrl && mediaType === 'photo' && (
@@ -99,6 +129,13 @@ export function PostComposer({ authorUid, onClose, onCreated }: Props) {
           placeholder="Legenda (opcional)"
           rows={3}
           className="w-full bg-slate-900 rounded-lg px-3 py-2.5 text-sm placeholder-slate-500 outline-none focus:ring-2 ring-cyan-500 resize-none"
+        />
+
+        <Toggle
+          checked={allowInteractions}
+          onChange={setAllowInteractions}
+          label="Permitir reações e comentários"
+          description="Deixa quem vê este post curtir e comentar"
         />
 
         {error && <p className="text-rose-400 text-sm">{error}</p>}

@@ -3,14 +3,15 @@ import type { Post, UserProfile } from '../types'
 import { useAuthContext } from '../lib/AuthContext'
 import { signOutUser, updateProfileFields } from '../lib/auth'
 import { countFollowers, countFollowing, getPendingRequests, getUserPosts } from '../lib/social'
-import { compressImage } from '../lib/media'
 import { uploadToCloudinary } from '../lib/cloudinary'
 import { EditProfileModal } from '../components/EditProfileModal'
 import { FollowListModal } from '../components/FollowListModal'
 import { UserSearchModal } from '../components/UserSearchModal'
 import { PostGrid } from '../components/PostGrid'
+import { AvatarCropper } from '../components/AvatarCropper'
 import { UserProfilePage } from './UserProfilePage'
 import { FollowRequestsPage } from './FollowRequestsPage'
+import { ConversationsListPage } from './ConversationsListPage'
 
 export function ProfilePage() {
   const { user, profile, refreshProfile } = useAuthContext()
@@ -23,8 +24,12 @@ export function ProfilePage() {
   const [listOpen, setListOpen] = useState<'followers' | 'following' | null>(null)
   const [searching, setSearching] = useState(false)
   const [requestsOpen, setRequestsOpen] = useState(false)
+  const [messagesOpen, setMessagesOpen] = useState(false)
   const [viewingUser, setViewingUser] = useState<UserProfile | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [avatarChoiceOpen, setAvatarChoiceOpen] = useState(false)
+  const [pickedImageSrc, setPickedImageSrc] = useState<string | null>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!profile) return
@@ -48,18 +53,24 @@ export function ProfilePage() {
     return <div className="p-4 text-slate-500">Carregando...</div>
   }
 
-  async function handlePhotoPick(e: React.ChangeEvent<HTMLInputElement>) {
+  function handlePhotoPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file || !user) return
+    if (!file) return
+    setAvatarChoiceOpen(false)
+    setPickedImageSrc(URL.createObjectURL(file))
+    e.target.value = ''
+  }
+
+  async function handleCropped(blob: Blob) {
+    if (!user) return
+    setPickedImageSrc(null)
     setUploadingPhoto(true)
     try {
-      const blob = await compressImage(file, 400)
       const url = await uploadToCloudinary(blob, 'image')
       await updateProfileFields(user.uid, { photoURL: url })
       await refreshProfile()
     } finally {
       setUploadingPhoto(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -71,6 +82,9 @@ export function ProfilePage() {
           <button onClick={() => setSearching(true)} className="text-slate-400" aria-label="Buscar pessoas">
             🔍
           </button>
+          <button onClick={() => setMessagesOpen(true)} className="text-slate-400" aria-label="Mensagens">
+            💬
+          </button>
           <button onClick={() => signOutUser()} className="text-sm text-slate-500">
             Sair
           </button>
@@ -80,7 +94,7 @@ export function ProfilePage() {
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         <div className="flex flex-col items-center pt-2 pb-4">
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => setAvatarChoiceOpen(true)}
             className="w-24 h-24 rounded-full bg-slate-800 overflow-hidden relative"
           >
             {profile.photoURL ? (
@@ -95,7 +109,15 @@ export function ProfilePage() {
             )}
           </button>
           <input
-            ref={fileInputRef}
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="user"
+            className="hidden"
+            onChange={handlePhotoPick}
+          />
+          <input
+            ref={galleryInputRef}
             type="file"
             accept="image/*"
             className="hidden"
@@ -153,6 +175,40 @@ export function ProfilePage() {
         <PostGrid posts={posts} />
       </div>
 
+      {avatarChoiceOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 flex items-end"
+          onClick={() => setAvatarChoiceOpen(false)}
+        >
+          <div className="w-full bg-slate-900 rounded-t-2xl p-4 space-y-2" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => cameraInputRef.current?.click()}
+              className="w-full bg-slate-800 text-slate-100 font-medium rounded-xl py-3"
+            >
+              📷 Tirar foto
+            </button>
+            <button
+              onClick={() => galleryInputRef.current?.click()}
+              className="w-full bg-slate-800 text-slate-100 font-medium rounded-xl py-3"
+            >
+              🖼️ Escolher da galeria
+            </button>
+            <button
+              onClick={() => setAvatarChoiceOpen(false)}
+              className="w-full text-slate-500 text-sm py-2"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+      {pickedImageSrc && (
+        <AvatarCropper
+          imageSrc={pickedImageSrc}
+          onCancel={() => setPickedImageSrc(null)}
+          onCropped={handleCropped}
+        />
+      )}
       {editing && (
         <EditProfileModal profile={profile} onSaved={refreshProfile} onClose={() => setEditing(false)} />
       )}
@@ -182,6 +238,7 @@ export function ProfilePage() {
           }}
         />
       )}
+      {messagesOpen && <ConversationsListPage myUid={profile.uid} onClose={() => setMessagesOpen(false)} />}
       {viewingUser && (
         <UserProfilePage
           profile={viewingUser}

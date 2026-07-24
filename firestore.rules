@@ -49,5 +49,42 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;
       allow update, delete: if isSignedIn() && request.auth.uid == resource.data.authorUid;
     }
+
+    // Curtidas e comentários: a opção "permitir reações e comentários" do
+    // autor é só respeitada pela UI (não mostra os botões), mesma filosofia
+    // de simplicidade das regras acima.
+    match /likes/{likeId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if false;
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.uid;
+    }
+
+    match /comments/{commentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;
+      allow update, delete: if isSignedIn() && request.auth.uid == resource.data.authorUid;
+    }
+
+    // Conversas: só os dois participantes podem ler/atualizar o documento.
+    // "resource == null" cobre o get() de checagem feito antes de criar uma
+    // conversa nova (documento ainda não existe nesse momento).
+    match /conversations/{conversationId} {
+      allow read, update: if isSignedIn()
+        && (resource == null || request.auth.uid in resource.data.participants);
+      allow create: if isSignedIn()
+        && request.auth.uid in request.resource.data.participants
+        && request.resource.data.participants.size() == 2;
+      allow delete: if false;
+    }
+
+    // Mensagens: id da conversa é `${uidA}_${uidB}` (uids ordenados) - não dá
+    // pra adivinhar sem já saber os dois uids envolvidos. Mesma simplificação
+    // de regras (sem get() cruzado) usada em posts/likes/comments acima.
+    match /messages/{messageId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.senderUid == request.auth.uid;
+      allow update, delete: if false;
+    }
   }
 }

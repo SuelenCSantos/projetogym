@@ -17,6 +17,39 @@ export async function compressImage(file: File, maxDim = 1080, quality = 0.85): 
   })
 }
 
+interface PixelCrop {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+/** Crops an image to the given pixel area (from react-easy-crop) and exports it as a square JPEG blob. */
+export function cropImage(imageSrc: string, crop: PixelCrop, outputSize = 400): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = outputSize
+      canvas.height = outputSize
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('Canvas indisponível'))
+        return
+      }
+      ctx.drawImage(img, crop.x, crop.y, crop.width, crop.height, 0, 0, outputSize, outputSize)
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error('Falha ao recortar imagem'))),
+        'image/jpeg',
+        0.9,
+      )
+    }
+    img.onerror = () => reject(new Error('Não foi possível carregar a imagem'))
+    img.src = imageSrc
+  })
+}
+
 /** Reads a video file's duration (seconds) without uploading it. */
 export function getVideoDuration(file: File): Promise<number> {
   return new Promise((resolve, reject) => {

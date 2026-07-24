@@ -11,6 +11,8 @@ import {
 } from '../lib/social'
 import { FollowListModal } from '../components/FollowListModal'
 import { PostGrid } from '../components/PostGrid'
+import { getOrCreateConversation } from '../lib/chat'
+import { ChatPage } from './ChatPage'
 
 interface Props {
   profile: UserProfile
@@ -26,6 +28,8 @@ export function UserProfilePage({ profile, onClose, onOpenUser }: Props) {
   const [posts, setPosts] = useState<Post[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [listOpen, setListOpen] = useState<'followers' | 'following' | null>(null)
+  const [openingChat, setOpeningChat] = useState(false)
+  const [chatConversationId, setChatConversationId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
@@ -65,6 +69,17 @@ export function UserProfilePage({ profile, onClose, onOpenUser }: Props) {
       }
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function handleOpenChat() {
+    if (!user || openingChat) return
+    setOpeningChat(true)
+    try {
+      const id = await getOrCreateConversation(user.uid, profile.uid)
+      setChatConversationId(id)
+    } finally {
+      setOpeningChat(false)
     }
   }
 
@@ -120,17 +135,26 @@ export function UserProfilePage({ profile, onClose, onOpenUser }: Props) {
             </button>
           </div>
 
-          <button
-            onClick={handleFollowToggle}
-            disabled={busy || followStatus === undefined}
-            className={`mt-4 text-sm font-medium rounded-lg px-5 py-2 disabled:opacity-50 ${
-              followStatus === 'accepted' || followStatus === 'pending'
-                ? 'bg-slate-800 text-slate-100'
-                : 'bg-cyan-500 text-slate-950'
-            }`}
-          >
-            {buttonLabel}
-          </button>
+          <div className="flex items-center gap-2 mt-4">
+            <button
+              onClick={handleFollowToggle}
+              disabled={busy || followStatus === undefined}
+              className={`text-sm font-medium rounded-lg px-5 py-2 disabled:opacity-50 ${
+                followStatus === 'accepted' || followStatus === 'pending'
+                  ? 'bg-slate-800 text-slate-100'
+                  : 'bg-cyan-500 text-slate-950'
+              }`}
+            >
+              {buttonLabel}
+            </button>
+            <button
+              onClick={handleOpenChat}
+              disabled={openingChat}
+              className="bg-slate-800 text-slate-100 text-sm font-medium rounded-lg px-5 py-2 disabled:opacity-50"
+            >
+              💬 Mensagem
+            </button>
+          </div>
         </div>
 
         {canViewPosts ? (
@@ -148,6 +172,14 @@ export function UserProfilePage({ profile, onClose, onOpenUser }: Props) {
           kind={listOpen}
           onClose={() => setListOpen(null)}
           onSelectUser={onOpenUser}
+        />
+      )}
+      {chatConversationId && user && (
+        <ChatPage
+          conversationId={chatConversationId}
+          myUid={user.uid}
+          otherProfile={profile}
+          onClose={() => setChatConversationId(null)}
         />
       )}
     </div>

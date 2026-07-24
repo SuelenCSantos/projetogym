@@ -73,6 +73,7 @@ export interface UserProfile {
   displayName: string
   photoURL: string | null
   isPrivate: boolean
+  allowInteractions?: boolean // undefined treated as true (default on)
   currentStreak: number
   lastWorkoutDate: string | null // YYYY-MM-DD
   createdAt: number
@@ -94,5 +95,32 @@ export interface Post {
   mediaURL: string
   thumbnailURL: string | null
   caption: string
+  createdAt: number
+  // snapshot of the author's preference at post time - undefined treated as true
+  allowInteractions?: boolean
+}
+
+export interface Comment {
+  id: string
+  postId: string
+  authorUid: string
+  text: string
+  createdAt: number
+}
+
+export interface Conversation {
+  id: string // sorted `${uidA}_${uidB}`
+  participants: [string, string]
+  lastMessageText: string
+  lastMessageAt: number
+  lastMessageSenderUid: string
+  createdAt: number
+}
+
+export interface Message {
+  id: string
+  conversationId: string
+  senderUid: string
+  text: string
   createdAt: number
 }
